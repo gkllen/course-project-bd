@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% load kb_extras %}
+{% block title %}{% if q %}«{{ q }}» — поиск{% else %}Каталог{% endif %}{% endblock %}
+{% block header_search %}{% endblock %}
+
+{% block content %}
+<div class="search-bar">
+  <div class="container">
+    <form action="{% url 'portal:search' %}" method="get" role="search">
+      <label class="sr-only" for="q">Поиск</label>
+      <input id="q" type="search" name="q" value="{{ q }}" placeholder="Поиск по базе знаний"
+             data-suggest="{% url 'portal:api_suggest' %}">
+      {% for v in res.filters.types %}<input type="hidden" name="type" value="{{ v }}">{% endfor %}
+      <input type="hidden" name="sort" value="{{ res.sort }}">
+      <button class="btn" type="submit">Найти</button>
+    </form>
+    {% if res.terms %}
+    <p class="query-terms">Нормализованный запрос (леммы):
+      {% for t in res.terms %}<code>{{ t }}</code> {% endfor %}
+      {% if res.expanded %} · префиксные расширения: {% for k, v in res.expanded.items %}<code>{{ v }}→{{ k }}</code> {% endfor %}{% endif %}
+    </p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="container search-layout">
+  <!-- ======= Фасеты ======= -->
+  <aside class="facets" aria-label="Фильтры">
+    <form method="get" action="{% url 'portal:search' %}" data-autosubmit>
+      <input type="hidden" name="q" value="{{ q }}">
+      <input type="hidden" name="sort" value="{{ res.sort }}">
+      <h2>Уточнить результаты {% if active_filters %}<a href="?q={{ q|urlencode }}&sort={{ res.sort }}">Сбросить</a>{% endif %}</h2>
+
+      <details class="facet" open>
+        <summary>Тип сущности</summary>
+        <ul>
+          {% for f in res.facets.type %}
+          <li><label class="{% if not f.count and not f.selected %}zero{% endif %}">
+            <input type="checkbox" name="type" value="{{ f.value }}" {% if f.selected %}checked{% endif %}>
+            <span class="swatch" style="--c:{{ f.color }}"></span>
+            <span class="lbl">{{ f.label }}</span><span class="cnt">({{ f.count }})</span>
+          </label></li>
+          {% endfor %}
+        </ul>
+      </details>
+
+      <details class="facet" open>
+        <summary>Год</summary>
+        <ul>
+          {% for f in res.facets.decade %}
+          <li><label>
+            <input type="checkbox" name="decade" value="{{ f.value }}" {% if f.selected %}checked{% endif %}>
+            <span class="lbl">{{ f.label }}</span><span class="cnt">({{ f.count }})</span>
+          </label></li>
+          {% empty %}<li class="muted small">Нет датированных записей</li>
+          {% endfor %}
+        </ul>
+        <div class="year-range">
+          <label class="sr-only" for="yf">С года</label>
+          <input id="yf" type="number" name="year_from" min="1900" max="2100"
+                 value="{{ res.filters.year_from|default_if_none:'' }}" placeholder="{{ res.facets.year.min|default_if_none:'с' }}">
+          <span>–</span>
+          <label class="sr-only" for="yt">По год</label>
+          <input id="yt" type="number" name="year_to" min="1900" max="2100"
+                 value="{{ res.filters.year_to|default_if_none:'' }}" placeholder="{{ res.facets.year.max|default_if_none:'по' }}">
+        </div>
+        <button class="btn btn-sm btn-outline" type="submit">Применить диапазон</button>
+      </details>
+
+      {% if res.facets.genre %}
+      <details class="facet" open>
+        <summary>Жанр</summary>
+        <ul>
+          {% for f in res.facets.genre %}
+          <li><label>
+            <input type="checkbox" name="genre" value="{{ f.value }}" {% if f.selected %}checked{% endif %}>
+            <span class="lbl">{{ f.label }}</span><span class="cnt">({{ f.count }})</span>
+          </label></li>
+          {% endfor %}
+        </ul>
+      </details>
+      {% endif %}
+
+      {% if res.facets.tag %}
+      <details class="facet" open>
+        <summary>Теги</summary>
+        <ul>
+          {% for f in res.facets.tag %}
+          <li><label>
+            <input type="checkbox" name="tag" value="{{ f.value }}" {% if f.selected %}checked{% endif %}>
+            <span class="lbl">{{ f.label }}</span><span class="cnt">({{ f.count }})</span>
+          </label></li>
+          {% endfor %}
+        </ul>
+      </details>
+      {% endif %}
+      <noscript><button class="btn btn-block" type="submit">Применить фильтры</button></noscript>
+    </form>
+  </aside>
+
+  <!-- ======= Результаты ======= -->
+  <section aria-label="Результаты поиска">
+    <div class="results-head">
+      <h1>
+        {% if q %}{{ res.total }} {{ res.total|ru_plural:"результат,результата,результатов" }} по запросу «{{ q }}»
+        {% else %}Каталог базы знаний: {{ res.total }} {{ res.total|ru_plural:"запись,записи,записей" }}{% endif %}
+        <span class="took">· {{ res.took_ms }} мс</span>
+      </h1>
+      <form class="sort-form" method="get" data-autosubmit>
+        {% for key, values in request.GET.lists %}{% if key != "sort" and key != "page" %}{% for v in values %}
+        <input type="hidden" name="{{ key }}" value="{{ v }}">{% endfor %}{% endif %}{% endfor %}
+        <label for="sort">Сортировка:</label>
+        <select id="sort" name="sort">
+          {% for key, label in sorts.items %}
+          <option value="{{ key }}" {% if key == res.sort %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <noscript><button class="btn btn-sm" type="submit">OK</button></noscript>
+      </form>
+    </div>
+
+    {% if active_filters %}
+    <div class="active-filters">
+      <span class="muted">Фильтры:</span>
+      {% for key, value, label in active_filters %}
+      <span class="chip">{{ label }}
+        {% if key == "year" %}<a href="{% url_without 'year_from' 'year_to' %}" aria-label="Убрать фильтр">×</a>
+        {% else %}<a href="{% url_toggle key value %}" aria-label="Убрать фильтр">×</a>{% endif %}
+      </span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if res.suggestion %}
+    <div class="didyoumean">Возможно, вы имели в виду:
+      <a href="?q={{ res.suggestion|urlencode }}"><strong>{{ res.suggestion }}</strong></a>
+    </div>
+    {% endif %}
+
+    {% if res.hits %}
+    <ol class="result-list">
+      {% for hit in res.hits %}{% include "portal/includes/result_card.html" %}{% endfor %}
+    </ol>
+
+    {% if res.pages > 1 %}
+    <nav aria-label="Страницы">
+      <ul class="pagination">
+        {% if res.page > 1 %}<li><a href="{% url_replace page=res.page|add:'-1' %}">‹ Назад</a></li>
+        {% else %}<li><span class="disabled">‹ Назад</span></li>{% endif %}
+        {% for n in page_window %}
+          {% if n is None %}<li><span class="disabled">…</span></li>
+          {% elif n == res.page %}<li><span class="current" aria-current="page">{{ n }}</span></li>
+          {% else %}<li><a href="{% url_replace page=n %}">{{ n }}</a></li>{% endif %}
+        {% endfor %}
+        {% if res.page < res.pages %}<li><a href="{% url_replace page=res.page|add:'1' %}">Вперёд ›</a></li>
+        {% else %}<li><span class="disabled">Вперёд ›</span></li>{% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="empty-state">
+      <h2>Ничего не найдено</h2>
+      <p>Попробуйте изменить запрос или <a href="?q={{ q|urlencode }}">сбросить фильтры</a>.</p>
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

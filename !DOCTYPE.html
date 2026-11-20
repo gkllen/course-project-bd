@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Текст как на фото - Довидович Миланы</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Montserrat', 'Arial Black', 'Impact', sans-serif;
+        }
+
+        /* Контейнер под ваше фото */
+        .container {
+            position: relative;
+            display: inline-block;
+        }
+
+        /* Само фото */
+        .photo {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        /* Текст поверх фото — точь-в-точь как на вашем примере */
+        .text-overlay {
+            position: absolute;
+            bottom: 12%;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            text-shadow: 
+                -2px -2px 0 black,
+                2px -2px 0 black,
+                -2px 2px 0 black,
+                2px 2px 0 black;
+        }
+
+        .course-label {
+            font-size: clamp(16px, 5vw, 32px);
+            font-weight: 700;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+        }
+
+        .title {
+            font-size: clamp(24px, 8vw, 58px);
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 15px;
+        }
+
+        .author {
+            font-size: clamp(16px, 5vw, 32px);
+            font-weight: 600;
+            letter-spacing: 2px;
+        }
+
+        /* Альтернативный вариант — если нужен просто холст (генератор картинки) */
+        canvas {
+            display: block;
+            max-width: 100%;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            margin: 20px auto;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        button {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            font-size: 18px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #c0392b;
+            transform: scale(1.02);
+        }
+
+        input {
+            padding: 10px;
+            border-radius: 30px;
+            border: none;
+            margin: 10px;
+        }
+
+        h3 {
+            color: white;
+            text-align: center;
+            margin: 20px;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+
+<div style="display: flex; flex-direction: column; align-items: center;">
+    <h3>📸 Загрузите ваше фото — текст добавится автоматически</h3>
+
+    <input type="file" id="imageUpload" accept="image/*">
+    
+    <div class="container" id="imageContainer" style="display: none;">
+        <img id="uploadedPhoto" class="photo" alt="Ваше фото">
+        <div class="text-overlay">
+            <div class="course-label">АВТОРСКИЙ КУРС</div>
+            <div class="title">"МАКИЯХ ДУНА СЕБЯ"</div>
+            <div class="author">ДОВИДОВИЧ МИЛАНЫ</div>
+        </div>
+    </div>
+
+    <!-- Кнопка скачать -->
+    <div class="controls">
+        <button id="downloadBtn" style="display: none;">💾 Скачать фото с текстом</button>
+    </div>
+
+    <h3>🎨 Или создайте картинку с нуля (можно скачать):</h3>
+    <canvas id="textCanvas" width="1000" height="700" style="background: #1a1a2e;"></canvas>
+    <button id="downloadCanvasBtn">📥 Скачать чистую картинку</button>
+</div>
+
+<script>
+    // === 1. Работа с загруженным фото ===
+    const imageUpload = document.getElementById('imageUpload');
+    const imageContainer = document.getElementById('imageContainer');
+    const uploadedPhoto = document.getElementById('uploadedPhoto');
+    const downloadBtn = document.getElementById('downloadBtn');
+    
+    let currentImage = null;
+
+    imageUpload.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            uploadedPhoto.src = event.target.result;
+            imageContainer.style.display = 'inline-block';
+            downloadBtn.style.display = 'inline-block';
+            currentImage = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Скачать фото с текстом (используем canvas)
+    downloadBtn.addEventListener('click', function() {
+        if (!uploadedPhoto.complete || !uploadedPhoto.naturalWidth) {
+            alert('Подождите, фото ещё не загружено');
+            return;
+        }
+        
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = uploadedPhoto.naturalWidth;
+        canvas.height = uploadedPhoto.naturalHeight;
+        
+        // Рисуем фото
+        ctx.drawImage(uploadedPhoto, 0, 0, canvas.width, canvas.height);
+        
+        // Настройки текста — как на вашем примере
+        ctx.textAlign = 'center';
+        ctx.font = `bold ${Math.floor(canvas.height * 0.05)}px "Montserrat", "Arial Black", sans-serif`;
+        ctx.shadowColor = 'black';
+        ctx.shadowBlur = 0;
+        
+        const lines = [
+            { text: 'АВТОРСКИЙ КУРС', fontSize: canvas.height * 0.045, weight: 'bold' },
+            { text: '"МАКИЯХ ДУНА СЕБЯ"', fontSize: canvas.height * 0.08, weight: '900' },
+            { text: 'ДОВИДОВИЧ МИЛАНЫ', fontSize: canvas.height * 0.045, weight: '600' }
+        ];
+        
+        let startY = canvas.height * 0.7;
+        
+        lines.forEach((line, index) => {
+            ctx.font = `${line.weight} ${line.fontSize}px "Montserrat", "Arial Black", sans-serif`;
+            
+            // Обводка
+            ctx.lineWidth = Math.max(3, line.fontSize / 15);
+            ctx.strokeStyle = 'black';
+            ctx.strokeText(line.text, canvas.width/2, startY);
+            
+            // Заливка белым
+            ctx.fillStyle = 'white';
+            ctx.fillText(line.text, canvas.width/2, startY);
+            
+            startY += line.fontSize * 1.2;
+        });
+        
+        // Скачиваем
+        const link = document.createElement('a');
+        link.download = 'photo_with_text.png';
+        link.href = canvas.toDataURL();
+        link.click();
+    });
+
+    // === 2. Рисуем красивую картинку с нуля (на canvas) ===
+    const textCanvas = document.getElementById('textCanvas');
+    const ctxCanvas = textCanvas.getContext('2d');
+    
+    function drawTextImage() {
+        const w = textCanvas.width;
+        const h = textCanvas.height;
+        
+        // Градиентный фон (стильно)
+        const grad = ctxCanvas.createLinearGradient(0, 0, w, h);
+        grad.addColorStop(0, '#1a1a2e');
+        grad.addColorStop(1, '#16213e');
+        ctxCanvas.fillStyle = grad;
+        ctxCanvas.fillRect(0, 0, w, h);
+        
+        // Рисуем текст
+        ctxCanvas.textAlign = 'center';
+        
+        const lines = [
+            { text: 'АВТОРСКИЙ КУРС', y: h * 0.35, size: w * 0.045, weight: 'bold' },
+            { text: '"МАКИЯХ ДУНА СЕБЯ"', y: h * 0.48, size: w * 0.08, weight: '900' },
+            { text: 'ДОВИДОВИЧ МИЛАНЫ', y: h * 0.62, size: w * 0.045, weight: '600' }
+        ];
+        
+        lines.forEach(line => {
+            ctxCanvas.font = `${line.weight} ${line.size}px "Montserrat", "Arial Black", sans-serif`;
+            ctxCanvas.shadowColor = 'rgba(0,0,0,0.8)';
+            ctxCanvas.shadowBlur = 8;
+            ctxCanvas.fillStyle = 'white';
+            ctxCanvas.fillText(line.text, w/2, line.y);
+            
+            // Добавим лёгкую тень для объёма
+            ctxCanvas.shadowBlur = 0;
+            ctxCanvas.fillStyle = 'rgba(255,255,255,0.95)';
+            ctxCanvas.fillText(line.text, w/2, line.y);
+        });
+    }
+    
+    drawTextImage();
+    
+    // Скачать сгенерированную картинку
+    document.getElementById('downloadCanvasBtn').addEventListener('click', function() {
+        const link = document.createElement('a');
+        link.download = 'text_poster.png';
+        link.href = textCanvas.toDataURL();
+        link.click();
+    });
+</script>
+
+</body>
+</html>

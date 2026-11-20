@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Граф знаний{% endblock %}
+{% block body_class %}page-graph{% endblock %}
+
+{% block content %}
+<div class="graph-page">
+  <aside class="graph-controls" aria-label="Управление графом">
+    <h2>Граф знаний</h2>
+    <p class="small muted" id="graph-counter">Загрузка…</p>
+    {% if focus_entry %}
+    <div class="soft-box small" style="margin-bottom:14px">
+      Окрестность записи <strong>{{ focus_entry.title }}</strong>
+      <form method="get" style="margin-top:8px">
+        <input type="hidden" name="focus" value="{{ focus_entry.slug }}">
+        <label for="depth">Глубина:</label>
+        <select id="depth" name="depth" onchange="this.form.submit()">
+          {% for d in "123" %}<option value="{{ d }}" {% if d|add:0 == depth %}selected{% endif %}>{{ d }}</option>{% endfor %}
+        </select>
+      </form>
+      <a href="{% url 'portal:graph' %}">← Показать весь граф</a>
+    </div>
+    {% endif %}
+
+    <label class="sr-only" for="node-search">Найти узел</label>
+    <input id="node-search" type="search" placeholder="Найти узел…">
+
+    <details class="facet" open>
+      <summary>Типы сущностей</summary>
+      <ul class="legend">
+        {% for t in types %}
+        <li><label>
+          <input type="checkbox" class="type-filter" value="{{ t.code }}" checked>
+          <span class="swatch" style="--c:{{ t.color }}"></span>
+          <span class="lbl">{{ t.name_plural }}</span><span class="cnt">({{ t.n }})</span>
+        </label></li>
+        {% endfor %}
+      </ul>
+    </details>
+    <div class="facet">
+      <button class="btn btn-sm btn-outline" id="graph-fit" type="button">Вписать</button>
+      <button class="btn btn-sm btn-outline" id="graph-relayout" type="button">Перестроить</button>
+      <button class="btn btn-sm btn-outline" id="graph-png" type="button" style="margin-top:6px">Сохранить PNG</button>
+    </div>
+    <p class="small muted">Размер узла пропорционален его степени (числу связей). Клик по узлу
+      подсвечивает соседей и открывает справку; колесо мыши — масштаб.</p>
+  </aside>
+
+  <div class="graph-canvas">
+    <div id="cy" role="img" aria-label="Граф связей базы знаний"></div>
+    <div class="graph-loading">Построение графа…</div>
+    <div class="graph-hint">Наведите на ребро, чтобы увидеть тип связи</div>
+  </div>
+
+  <aside class="graph-info" id="graph-info" aria-live="polite">
+    <h2>Справка по узлу</h2>
+    <p class="muted small">Выберите узел на графе, чтобы увидеть краткую справку, связи и перейти к карточке записи.</p>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
+<script src="{% static 'js/graph.js' %}"></script>
+<script>
+  KBGraph.mount(document.getElementById("cy"), {
+    url: "{% url 'portal:api_graph' %}{% if focus_entry %}?focus={{ focus_entry.slug|urlencode }}&depth={{ depth }}{% endif %}",
+    info: document.getElementById("graph-info"),
+    typeInputs: Array.prototype.slice.call(document.querySelectorAll(".type-filter")),
+    search: document.getElementById("node-search")
+  });
+</script>
+{% endblock %}

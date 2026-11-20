@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% load static kb_extras %}
+{% block title %}{{ entry.title }}{% endblock %}
+{% block description %}{{ entry.summary|truncatechars:160 }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <nav class="breadcrumbs" aria-label="Хлебные крошки">
+    <ol>
+      <li><a href="{% url 'portal:home' %}">Главная</a></li>
+      <li><a href="{% url 'portal:search' %}?type={{ entry.entity_type.code }}">{{ entry.entity_type.name_plural }}</a></li>
+      <li aria-current="page">{{ entry.title }}</li>
+    </ol>
+  </nav>
+
+  <header class="article-header">
+    <div class="article-type">
+      {% type_badge entry.entity_type %}
+      <span>Запись базы знаний</span>
+      {% if entry.year %}<span>· {{ entry.year }}</span>{% endif %}
+    </div>
+    <h1>{{ entry.title }}</h1>
+    {% if entry.original_title %}<p class="orig">{{ entry.original_title }}</p>{% endif %}
+    <ul class="meta-list">
+      <li><span class="k">Идентификатор:</span> <span class="v kb-id">{{ entry.kb_id }}</span></li>
+      {% if entry.year %}<li><span class="k">Год:</span> <span class="v">{{ entry.year }}</span></li>{% endif %}
+      {% if entry.genres %}<li><span class="k">Жанры:</span> <span class="v">{{ entry.genres|join:", " }}</span></li>{% endif %}
+      <li><span class="k">Обновлено:</span> <span class="v">{{ entry.updated_at|date:"d E Y" }}</span></li>
+    </ul>
+    {% with tags=entry.tags.all %}{% if tags %}
+    <ul class="tags" aria-label="Ключевые слова">
+      {% for t in tags %}<li><a class="tag" href="{% url 'portal:search' %}?tag={{ t.slug }}">{{ t.name }}</a></li>{% endfor %}
+    </ul>
+    {% endif %}{% endwith %}
+  </header>
+
+  <div class="article-layout">
+    <article class="article-main">
+      <section id="abstract" class="abstract">
+        <h2>Аннотация</h2>
+        <p>{{ entry.summary }}</p>
+      </section>
+
+      {% for s in sections %}
+      <section id="{{ s.anchor }}" class="prose">
+        <h2>{{ s.title }}</h2>
+        {% for p in s.paragraphs %}<p>{{ p }}</p>{% endfor %}
+      </section>
+      {% endfor %}
+
+      {% if entry.metadata_json %}
+      <section id="attributes">
+        <h2>Характеристики</h2>
+        <table class="attr-table">
+          <tr><th>Тип сущности</th><td>{{ entry.entity_type.name }}</td></tr>
+          {% if entry.original_title %}<tr><th>Оригинальное название</th><td>{{ entry.original_title }}</td></tr>{% endif %}
+          {% if entry.year %}<tr><th>Год</th><td>{{ entry.year }}</td></tr>{% endif %}
+          {% for k, v in entry.metadata_json.items %}<tr><th>{{ k }}</th><td>{{ v }}</td></tr>{% endfor %}
+        </table>
+      </section>
+      {% endif %}
+
+      {% if rel_groups %}
+      <section id="related">
+        <h2>Связанные сущности базы знаний <span class="muted small">({{ rel_total }})</span></h2>
+        {% for g in rel_groups %}
+        <div class="rel-group">
+          <h3><span class="swatch" style="--c:{{ g.type.color }}"></span>{{ g.type.name_plural }}
+            <span class="cnt">· {{ g.items|length }}</span></h3>
+          <ul class="rel-list">
+            {% for it in g.items %}
+            <li class="rel-item" style="--c:{{ g.type.color }}">
+              <span class="rel-type">{% if it.direction == "out" %}→{% else %}←{% endif %} <b>{{ it.label }}</b>{% if it.relation.note %} · {{ it.relation.note }}{% endif %}</span>
+              <a href="{{ it.entry.get_absolute_url }}">{{ it.entry.title }}</a>{% if it.entry.year and it.entry.entity_type.code == "film" %} <span class="muted small">({{ it.entry.year }})</span>{% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      <section id="cite">
+        <h2>Цитирование и экспорт</h2>
+        <div class="citation" id="citation-text">{{ entry.citation|safe }}</div>
+        <div class="citation-actions">
+          <button class="btn btn-sm btn-outline" type="button" data-copy="#citation-text">Скопировать ссылку</button>
+          <a class="btn btn-sm" href="{% url 'portal:entry_export' entry.slug %}">Скачать JSON</a>
+          <a class="btn btn-sm btn-outline" href="{% url 'portal:api_entry' entry.slug %}">Открыть в API</a>
+        </div>
+      </section>
+    </article>
+
+    <aside>
+      <div class="sidebar-sticky">
+        <div class="sidebar-box">
+          <h2>Содержание</h2>
+          <ol class="toc">
+            {% for t in toc %}<li><a href="#{{ t.anchor }}">{{ t.title }}</a></li>{% endfor %}
+          </ol>
+        </div>
+        <div class="sidebar-box">
+          <h2>Метрики</h2>
+          <div class="metrics">
+            <div><div class="stat-value">{{ views }}</div><div class="stat-label">просмотров</div></div>
+            <div><div class="stat-value">{{ rel_total }}</div><div class="stat-label">связей</div></div>
+          </div>
+        </div>
+        {% if rel_total %}
+        <div class="sidebar-box">
+          <h2>Окрестность в графе</h2>
+          <div class="graph-canvas"><div id="mini-graph" class="mini-graph"></div><div class="graph-loading">Загрузка…</div></div>
+          <p class="small" style="margin:8px 0 0"><a href="{% url 'portal:graph' %}?focus={{ entry.slug }}">Открыть в графе знаний →</a></p>
+        </div>
+        {% endif %}
+        {% if user.is_staff %}
+        <a class="btn btn-sm btn-outline btn-block" href="{% url 'admin:knowledge_knowledgeentry_change' entry.pk %}">Редактировать в админке</a>
+        {% endif %}
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if rel_total %}
+<script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
+<script src="{% static 'js/graph.js' %}"></script>
+<script>
+  KBGraph.mount(document.getElementById("mini-graph"),
+                { url: "{% url 'portal:api_graph' %}?focus={{ entry.slug|urlencode }}&depth=1", mini: true });
+</script>
+{% endif %}
+{% endblock %}

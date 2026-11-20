@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load kb_extras %}
+{% block title %}Главная{% endblock %}
+{% block header_search %}{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <h1>Фильмография и творчество Гая Ричи</h1>
+    <p class="lead">Структурированная база знаний: фильмы, персонажи, актёры, фирменные режиссёрские
+      приёмы, сюжетные тропы и семантические связи между ними.</p>
+
+    <form class="hero-search" action="{% url 'portal:search' %}" method="get" role="search">
+      <label class="sr-only" for="q">Поиск по базе знаний</label>
+      <input id="q" type="search" name="q" autofocus
+             placeholder="Фильм, персонаж, актёр, приём, цитата…"
+             data-suggest="{% url 'portal:api_suggest' %}">
+      <button type="submit">Найти</button>
+    </form>
+    <div class="hero-hints">Например:
+      {% for ex in examples %}<a href="{% url 'portal:search' %}?q={{ ex|urlencode }}">{{ ex }}</a>{% endfor %}
+    </div>
+
+    <div class="stats">
+      <div><div class="stat-value">{{ stats.entries }}</div><div class="stat-label">записей</div></div>
+      <div><div class="stat-value">{{ stats.entity_types }}</div><div class="stat-label">категорий знаний</div></div>
+      <div><div class="stat-value">{{ stats.relations }}</div><div class="stat-label">семантических связей</div></div>
+      <div><div class="stat-value">{{ stats.relation_types }}</div><div class="stat-label">типов связей</div></div>
+      <div><div class="stat-value">{{ stats.tags }}</div><div class="stat-label">ключевых слов</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <h2>Обзор по типам знаний</h2>
+      <a href="{% url 'portal:search' %}">Весь каталог →</a>
+    </div>
+    <div class="type-grid">
+      {% for t in types %}
+      <a class="type-tile" style="--c:{{ t.color }}" href="{% url 'portal:search' %}?type={{ t.code }}">
+        <strong>{{ t.name_plural }} <span class="count">· {{ t.n }}</span></strong>
+        <p>{{ t.description }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container two-cols">
+    <div>
+      <div class="section-head">
+        <h2>Популярные материалы</h2>
+        <a href="{% url 'portal:search' %}">Показать все →</a>
+      </div>
+      <div class="cards-grid">
+        {% for e in popular %}
+        <article class="mini-card">
+          <div>{% type_badge e.entity_type %}</div>
+          <h3><a href="{{ e.get_absolute_url }}">{{ e.title }}</a></h3>
+          <p>{{ e.summary|truncatewords:22 }}</p>
+          <div class="meta">{% if e.year %}{{ e.year }} · {% endif %}{{ e.views }} просмотров</div>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+    <aside>
+      <div class="section-head"><h2>Новейшие фильмы</h2></div>
+      <ul class="list-plain">
+        {% for f in latest_films %}
+        <li><a href="{{ f.get_absolute_url }}"><strong>{{ f.title }}</strong></a>
+          <div class="small muted">{{ f.year }} · {{ f.genres|join:", " }}</div></li>
+        {% endfor %}
+      </ul>
+      <p><a href="{% url 'portal:search' %}?type=film&sort=newest">Вся фильмография →</a></p>
+
+      <div class="soft-box">
+        <h3>Граф знаний</h3>
+        <p class="small">Интерактивная карта всех {{ stats.entries }} сущностей и {{ stats.relations }} связей
+          базы знаний с раскраской по типам.</p>
+        <a class="btn btn-sm" href="{% url 'portal:graph' %}">Открыть граф</a>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <h2>Режиссёрские приёмы</h2>
+      <a href="{% url 'portal:search' %}?type=technique">Все приёмы →</a>
+    </div>
+    <ul class="tags">
+      {% for t in techniques %}<li><a class="tag" href="{{ t.get_absolute_url }}">{{ t.title }}</a></li>{% endfor %}
+    </ul>
+  </div>
+</section>
+{% endblock %}

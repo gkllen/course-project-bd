@@ -1,0 +1,44 @@
+{% load kb_extras %}
+<li class="result">
+  <div class="result-top">
+    {% type_badge hit.entry.entity_type %}
+    {% if hit.entry.year %}<span>{{ hit.entry.year }}</span>{% endif %}
+    <span class="kb-id">{{ hit.entry.kb_id }}</span>
+  </div>
+  <h3><a href="{{ hit.entry.get_absolute_url }}">{{ hit.title_html }}</a></h3>
+  {% if hit.entry.original_title %}<div class="orig">{{ hit.entry.original_title }}</div>{% endif %}
+  <p class="snippet">{{ hit.snippet_html }}</p>
+  {% if hit.related %}
+  <div class="persons">
+    {% for r in hit.related %}<span class="rel">{{ r.label }}:</span> <a href="{{ r.entry.get_absolute_url }}">{{ r.entry.title }}</a>{% if not forloop.last %}; {% endif %}{% endfor %}
+  </div>
+  {% endif %}
+  <div class="result-bottom">
+    <ul class="tags">
+      {% for t in hit.entry.tags.all|slice:":5" %}
+      <li><a class="tag" href="{% url 'portal:search' %}?tag={{ t.slug }}">{{ t.name }}</a></li>
+      {% endfor %}
+    </ul>
+    <div class="score" title="Итоговый скор ранжирования">
+      {% if hit.explain %}Релевантность{% else %}Центральность{% endif %}: <strong>{{ hit.score }}</strong>
+      <span class="score-bar"><span style="width: {{ hit.score|percent:max_score }}%"></span></span>
+    </div>
+  </div>
+  {% if hit.explain %}
+  <details class="explain">
+    <summary>Как посчитан скор (BM25F)</summary>
+    <table>
+      <tr><th>Компонент</th><th>Значение</th></tr>
+      <tr><td>BM25F (сумма по терминам)</td><td>{{ hit.explain.bm25f }}</td></tr>
+      {% for f, v in hit.explain.fields.items %}
+      <tr><td>&nbsp;&nbsp;вклад поля «{{ f|field_label }}»</td><td>{{ v }}</td></tr>
+      {% endfor %}
+      {% for k, v in hit.explain.bonuses.items %}
+      <tr><td>Бонус: {{ k }}</td><td>{{ v }}</td></tr>
+      {% endfor %}
+      <tr><td>Совпавшие термины</td><td>{{ hit.explain.matched_terms|join:", " }}</td></tr>
+      <tr><th>Итог</th><th>{{ hit.score }}</th></tr>
+    </table>
+  </details>
+  {% endif %}
+</li>

@@ -1,0 +1,78 @@
+{% load static %}<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}База знаний «Гай Ричи»{% endblock %} | GR Knowledge Base</title>
+  <meta name="description" content="{% block description %}Академическая база знаний по фильмографии и творчеству Гая Ричи: фильмы, персонажи, актёры, режиссёрские приёмы и связи между ними.{% endblock %}">
+  <link rel="stylesheet" href="{% static 'css/springer.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+<a class="sr-only" href="#main">Перейти к содержанию</a>
+<header class="site-header">
+  <div class="container">
+    <a class="logo" href="{% url 'portal:home' %}" aria-label="На главную">
+      <span class="logo-mark">GR</span>
+      <span class="logo-text">Guy Ritchie KB<small>База знаний по фильмографии</small></span>
+    </a>
+    {% with path=request.path %}
+    <nav class="main-nav" aria-label="Разделы">
+      <a href="{% url 'portal:search' %}" class="{% if path == '/search/' and not request.GET.type %}active{% endif %}">Каталог</a>
+      <a href="{% url 'portal:search' %}?type=film&sort=newest" class="{% if request.GET.type == 'film' %}active{% endif %}">Фильмы</a>
+      <a href="{% url 'portal:search' %}?type=character" class="{% if request.GET.type == 'character' %}active{% endif %}">Персонажи</a>
+      <a href="{% url 'portal:search' %}?type=actor" class="{% if request.GET.type == 'actor' %}active{% endif %}">Актёры</a>
+      <a href="{% url 'portal:search' %}?type=technique" class="{% if request.GET.type == 'technique' %}active{% endif %}">Приёмы</a>
+      <a href="{% url 'portal:graph' %}" class="{% if path == '/graph/' %}active{% endif %}">Граф знаний</a>
+    </nav>
+    {% endwith %}
+    <div class="header-actions">
+      {% block header_search %}
+      <form class="header-search" action="{% url 'portal:search' %}" method="get" role="search">
+        <label class="sr-only" for="hs">Поиск</label>
+        <input id="hs" type="search" name="q" placeholder="Поиск по базе знаний" data-suggest="{% url 'portal:api_suggest' %}">
+      </form>
+      {% endblock %}
+      <a class="btn btn-sm btn-outline" href="{% url 'admin:index' %}">Инженер знаний</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+{% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <h4>База знаний «Фильмография и творчество Гая Ричи»</h4>
+        <p>Курсовая работа по дисциплине «Базы знаний». Семантическая сеть сущностей
+          и связей, собственный полнотекстовый поиск BM25F с лемматизацией русского языка.</p>
+      </div>
+      <div>
+        <h4>Разделы</h4>
+        <ul>
+          <li><a href="{% url 'portal:search' %}">Каталог</a></li>
+          <li><a href="{% url 'portal:graph' %}">Граф знаний</a></li>
+          <li><a href="{% url 'admin:index' %}">Админ-панель</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>REST API</h4>
+        <ul>
+          <li><a href="{% url 'portal:api_search' %}?q=джентльмены">/api/search/</a></li>
+          <li><a href="{% url 'portal:api_entry' 'snatch' %}">/api/entry/&lt;slug&gt;/</a></li>
+          <li><a href="{% url 'portal:api_graph' %}">/api/graph/</a></li>
+          <li><a href="{% url 'portal:api_stats' %}">/api/stats/</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">Django · SQLite · BM25F · pymorphy3 · Cytoscape.js</div>
+  </div>
+</footer>
+<script src="{% static 'js/suggest.js' %}" defer></script>
+<script src="{% static 'js/kb.js' %}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
